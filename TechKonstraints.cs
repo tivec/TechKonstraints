@@ -26,7 +26,7 @@ namespace TechKonstraints
 					}
 				}
 			}
-			return "unknown part";
+			return "unknown part (" + id + ")";
 		}
 
 		private void PartPurchased(AvailablePart part)
