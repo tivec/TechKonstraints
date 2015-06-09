@@ -9,21 +9,41 @@ namespace TechKonstraints
 	[KSPAddon(KSPAddon.Startup.SpaceCentre, false)]
 	public class TechKonstraints : MonoBehaviour
 	{
+
 		public TechKonstraints ()
 		{
+		}
 
+		private string GetPartNameFromID(string id)
+		{
+			foreach (RDNode node in RDController.Instance.nodes) {
+				if (node.tech != null)
+				{
+					foreach (AvailablePart ap in node.tech.partsAssigned) {
+						if (ap.name == id) {
+							return ap.title;
+						}
+					}
+				}
+			}
+			return "unknown part";
 		}
 
 		private void PartPurchased(AvailablePart part)
 		{
+			if (HighLogic.CurrentGame.Parameters.Difficulty.BypassEntryPurchaseAfterResearch) 
+			{
+				return; // just break, there's no need to do anything here if you don't purchase parts.
+			}
+
 			Utilities.Log ("TechKonstraints", GetInstanceID (), "Part purchased: " + part.name + " (" + part.configFileFullName + ")");
 			// Look for partRequired in the AvailablePart config
 			ConfigNode partConfig = part.partConfig;
 
-			if (partConfig.HasValue("requiredPart")) {
-				Utilities.Log ("TechKonstraints", GetInstanceID (), "Part " + part.name + " has the following requiredPart: ");
+			if (partConfig.HasValue("requiredParts")) {
+				Utilities.Log ("TechKonstraints", GetInstanceID (), "Part " + part.name + " has the following requiredParts: ");
 
-				string requiredParts = partConfig.GetValue ("requiredPart");
+				string requiredParts = partConfig.GetValue ("requiredParts");
 
 				Utilities.Log ("TechKonstraints", GetInstanceID (), requiredParts);
 
@@ -52,6 +72,7 @@ namespace TechKonstraints
 									break;
 								}
 							}
+
 						}
 
 						if (partFound) {
@@ -63,11 +84,10 @@ namespace TechKonstraints
 					{
 						Utilities.Log ("TechKonstraints", GetInstanceID (), "We can't research this!");
 						canResearch = false;
+						ScreenMessages.PostScreenMessage ("You must purchase " + GetPartNameFromID (rPart.Trim ()) + " first!", 5, ScreenMessageStyle.UPPER_CENTER);
 						break;
 					}
 				}
-
-
 
 				if (!canResearch) {
 					Utilities.Log ("TechKonstraints", GetInstanceID (), "Time for cleanup, removing researched part.");
@@ -82,6 +102,7 @@ namespace TechKonstraints
 						{
 							Utilities.Log ("TechKonstraints", GetInstanceID (), "Removing part from list of purchased parts.");
 							protoNode.partsPurchased.Remove (part);
+							Funding.Instance.AddFunds (part.entryCost, TransactionReasons.RnDPartPurchase); // give back money!
 						}
 					}
 				}
